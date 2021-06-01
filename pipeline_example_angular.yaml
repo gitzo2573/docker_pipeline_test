@@ -1,0 +1,57 @@
+# Variable 'acr.password' was defined in the Variables tab
+# Variable 'acr.username' was defined in the Variables tab
+# Variable 'app.APP_ENV' was defined in the Variables tab
+# Variable 'app.DSCAT_DB_URL' was defined in the Variables tab
+# Variable 'app.port' was defined in the Variables tab
+# Variable 'repocentral.UserName' was defined in the Variables tab
+# Variable 'repocentral.UserPassword' was defined in the Variables tab
+variables:
+# - name: BuildParameters.mavenPOMFile
+#   value: pom.xml
+name: $(date:yyyyMMdd)$(rev:.r)
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: refs/heads/rm_azure_delivery
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    name: 26185agents
+  steps:
+  - task: Docker@2
+    displayName: Build CARC/CCOCAN Docker Image
+    inputs:
+      # azureSubscriptionEndpoint: aaaf0b6e-3667-4eeb-8d60-74cef2015f44
+      azureContainerRegistry: wa2573acr.azurecr.io
+      command: build
+      dockerFile: Docker/Dockerfile
+      imageName: wa2573acr.azurecr.io/carc:$(Build.BuildId)
+      buildContext: Docker
+  - task: Docker@2
+    displayName: Docker Push Current Image to ACR
+    inputs:
+      # azureSubscriptionEndpoint: aaaf0b6e-3667-4eeb-8d60-74cef2015f44
+      azureContainerRegistry: 9946devopsacr.azurecr.io
+      command: Push an image
+      imageName: wa2573acr.azurecr.io/carc:$(Build.BuildId)
+      buildContext: '**'
+  - task: AzureRmWebAppDeployment@4
+    displayName: 'Azure App Service Deploy: carc-eastus2-poc-appservice-01'
+    inputs:
+      ConnectedServiceName: aaaf0b6e-3667-4eeb-8d60-74cef2015f44
+      WebAppKind: webAppContainer
+      WebAppName: carc-eastus2-poc-appservice-01
+      DockerNamespace: wa2573acr.azurecr.io
+      DockerRepository: carc
+      DockerImageTag: $(Build.BuildId)
+      StartupCommand: ' '
+      # AppSettings: -DOCKER_REGISTRY_SERVER_USERNAME $(acr.username) -DOCKER_REGISTRY_SERVER_PASSWORD $(acr.password) -WEBSITES_PORT $(app.port) -PORT $(app.port) -DSCAT_DB_URL $(app.DSCAT_DB_URL) -APP_ENV $(app.APP_ENV)
+  - task: AzureAppServiceManage@0
+    displayName: Restart CARC Web App
+    inputs:
+      ConnectedServiceName: aaaf0b6e-3667-4eeb-8d60-74cef2015f44
+      Action: Restart Azure App Service
+      WebAppName: carc-eastus2-poc-appservice-01
+...

@@ -1,0 +1,33 @@
+variables:
+  - name: motsId
+    value: 10363                           # <--- CHANGE TO APPLICATION MOTSID
+  - name: agent_pool
+    value: 10363agents
+  - name: projectName
+    value: "10363-SHE-IBM-HTTP-Docker"                    # <--- CHANGE TO YOUR ADO PROJECT NAME
+  - name: container_registry
+    value: "10363azurecontainerregistry.azurecr.io"
+  - name: project_subscription
+    value: 485b031c-c790-44cc-8735-639b6c53a6cb
+  - name: container_source
+    value: "https://github.com/renmak/dockerfile-examples/tree/main/az-app-service-ubuntu"
+#- name: pipelineId
+  # value: 392
+ #- name: preferTriggeringPipeline
+ #  value: true
+  - name: downloadPath
+    value: $(Build.ArtifactStagingDirectory)
+  - name: runVersion
+    value: latestFromBranch
+  - name: runBranch
+    value: refs/heads/master
+  # - name: basedOnStratumKitName           # Only needed when running kit from Stratum
+  #   value: jumpstart-vmss
+  # - name: artifactFeedCredentials         # PAT based service connection to Azure Artifacts feed
+  #   value: "ACC-Azure-00-Stratum-Feed"
+  # - name: artifactFeed
+  #   value: "Stratum"
+  # - name: kitPath
+  #   value: '.'
+  # - name: useMsi
+  #   value: "true"

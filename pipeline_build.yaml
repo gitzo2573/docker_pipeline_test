@@ -1,0 +1,85 @@
+# Variable 'acr.password' was defined in the Variables tab
+# Variable 'acr.username' was defined in the Variables tab
+# Variable 'app.APP_ENV' was defined in the Variables tab
+# Variable 'app.DSCAT_DB_URL' was defined in the Variables tab
+# Variable 'app.port' was defined in the Variables tab
+# Variable 'repocentral.UserName' was defined in the Variables tab
+# Variable 'repocentral.UserPassword' was defined in the Variables tab
+trigger:
+  branches:
+    include:
+      - users/*
+  paths:
+    include:
+      - /kits/jumpstart-vmss/*
+    exclude:
+      - /**/*.md
+      - /secret/*.*
+      - /.attachments
+variables:
+  - template: Variables.yaml
+pool: $(agent_pool)
+# remove this if not planning to use image builder
+#resources:
+  #pipelines:
+    #- pipeline: image-source
+     # source: jumpstart-image-builder-sig         #<--- Verify source matches name of image builder pipeline
+      #trigger:
+       # branches:
+        #  include:
+         #   - master
+name: $(date:yyyyMMdd)$(rev:.r)
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: refs/heads/rm_azure_delivery
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    name: $(agent_pool)
+  steps:
+  # - checkout: self
+  #   clean: true
+  # - task: Maven@3
+  #   displayName: Maven Package of DSCATEAR.ear
+  #   inputs:
+  #     mavenPOMFile: $(BuildParameters.mavenPOMFile)
+  #     goals: clean package
+  #     options: --settings settings.xml -DSERVER.USERNAME=$(repocentral.UserName) -DSERVER.PASSWORD=$(repocentral.UserPassword)
+  #     publishJUnitResults: false
+  - task: Docker@1
+    displayName: 'Build Test Docker Image'
+    inputs:
+      azureSubscriptionEndpoint: 'ADO-Azure-Connection'
+      azureContainerRegistry: $(container_source)
+      command: build
+      dockerFile: Dockerfile
+      imageName: '$(container_registry)/spike:$(Build.BuildId)'
+      buildContext: Docker
+  - task: Docker@1
+    displayName: Docker Push Current Image to ACR
+    inputs:
+      azureSubscriptionEndpoint: $(project_subscription)
+      azureContainerRegistry: $(container_registry)
+      command: Push an image
+      imageName: $(container_registry)/spike:$(Build.BuildId)
+      buildContext: '**'
+  - task: AzureRmWebAppDeployment@4
+    displayName: 'Azure App Service Deploy: westworld-spike-eastus2-appservice-01'
+    inputs:
+      ConnectedServiceName: $(project_subscription)
+      WebAppKind: webAppContainer
+      WebAppName: westworld-spike-eastus2-appservice-01
+      DockerNamespace: $(container_registry)
+      DockerRepository: spike
+      DockerImageTag: $(Build.BuildId)
+      StartupCommand: ' '
+      # AppSettings: -DOCKER_REGISTRY_SERVER_USERNAME $(acr.username) -DOCKER_REGISTRY_SERVER_PASSWORD $(acr.password) -WEBSITES_PORT $(app.port) -PORT $(app.port) -DSCAT_DB_URL $(app.DSCAT_DB_URL) -APP_ENV $(app.APP_ENV)
+  - task: AzureAppServiceManage@0
+    displayName: Restart HTTP Web App
+    inputs:
+      ConnectedServiceName: $(project_subscription)
+      Action: Restart Azure App Service
+      WebAppName: westworld-spike-eastus2-appservice-01
