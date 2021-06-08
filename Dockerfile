@@ -8,7 +8,7 @@ RUN npm run build --prod
 # stage 2
 FROM httpd:2.4
 
-COPY Docker/httpd_start.sh /usr/src/app
+COPY httpd_start.sh /usr/src/app
 # COPY --from=node /usr/src/app/dist/carc /var/www
 
 # EXPOSE 80
