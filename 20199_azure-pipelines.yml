@@ -1,0 +1,66 @@
+# Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  azureSubscription: '20199-SACCE-NPRD-SC'
+  # Container registry service connection
+  containerRegistryServiceConnection: '20199-SACCE-NPRD-DOCKER-20199devopsacr'
+  containerRegistryName: '20199devopsacr.azurecr.io'
+  imageRepository: 'pocdockertomcat'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+  appName: 'sacce-dev-azapp-001'
+
+  #ADO agent pool
+  agent_pool: 20199agents
+  
+# Agent pool
+pool: $(agent_pool)
+
+steps:
+  
+  - script: echo Hello, world!
+    displayName: 'Run a one-line script'
+
+  - script: |
+      echo Add other tasks to build, test, and deploy your project.
+      echo See https://aka.ms/yaml
+    displayName: 'Run a multi-line script'
+
+  - task: Docker@2
+    displayName: Login to ACR
+    inputs:
+      command: login
+      containerRegistry: $(containerRegistryServiceConnection)
+
+  - task: Docker@2
+    displayName: Build an image
+    inputs:
+      repository: $(imageRepository)
+      command: build
+      Dockerfile: $(dockerfilePath)
+
+  - task: Docker@2
+    displayName: Push image
+    inputs:
+      command: push
+      containerRegistry: $(containerRegistryServiceConnection)
+      repository: $(imageRepository)
+      tags: |
+        $(tag)
+       
+  - task: AzureWebAppContainer@1
+    displayName: 'Azure Web App on Container Deploy'
+    inputs:
+      azureSubscription: $(azureSubscription)
+      appName: $(appName)
+      containers: $(containerRegistryName)/$(imageRepository):$(tag)
+
+        

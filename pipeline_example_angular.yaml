@@ -17,8 +17,8 @@ resources:
 jobs:
 - job: Job_1
   displayName: Agent job 1
-  pool:
-    name: 26185agents
+  pool: 26185agents
+    # name: 26185agents
   steps:
   - task: Docker@2
     displayName: Build CARC/CCOCAN Docker Image
@@ -26,14 +26,14 @@ jobs:
       # azureSubscriptionEndpoint: aaaf0b6e-3667-4eeb-8d60-74cef2015f44
       azureContainerRegistry: wa2573acr.azurecr.io
       command: build
-      dockerFile: Docker/Dockerfile
+      dockerFile: docker/Dockerfile
       imageName: wa2573acr.azurecr.io/carc:$(Build.BuildId)
       buildContext: Docker
   - task: Docker@2
     displayName: Docker Push Current Image to ACR
     inputs:
       # azureSubscriptionEndpoint: aaaf0b6e-3667-4eeb-8d60-74cef2015f44
-      azureContainerRegistry: 9946devopsacr.azurecr.io
+      azureContainerRegistry: wa2573acr.azurecr.io
       command: Push an image
       imageName: wa2573acr.azurecr.io/carc:$(Build.BuildId)
       buildContext: '**'
