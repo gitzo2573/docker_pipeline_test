@@ -1,0 +1,54 @@
+### STAGE 1: Build Application ###
+FROM node:14.17-buster AS appbuild
+WORKDIR /usr/src/app
+COPY package.json package-lock.json ./
+RUN npm install
+# copy all source code - unneeded files/foldes are listed in the .dockerignore file
+COPY . .
+RUN npm run build
+
+
+
+### STAGE 2: Build Apache http Server ###
+# the httpd build comes with debian: buster-slim   [Debian 10 (Buster) slim]
+FROM httpd:2.4
+
+# Install apt-utils --> helps with other packages.
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y apt-utils 
+
+# Install packages.
+# openssh-server is required in order to SSH into app service running in Azure dashboard. 
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
+    sudo systemd firewalld lynx \
+    bash coreutils curl nano vim git tar openssh-client openssh-server msmtp \
+    cron gnupg2 composer locales locales-all snmp supervisor \
+    lsb-release apt-transport-https bsdmainutils ntpdate; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+#############
+# PHP
+# && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive wget --no-check-certificate https://packages.sury.org/php/apt.gpg \
+    && apt-key add apt.gpg \
+    && echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee -a /etc/apt/sources.list.d/php7.list \
+    && apt-get update -qq \
+    && apt-get install -y \
+    php7.4 php7.4-common php7.4-cli \
+    php7.4-mbstring php7.4-xml php7.4-json php7.4-tidy \
+    php7.4-snmp php7.4-dba php7.4-mysql php7.4-odbc; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+
+# httpd conf file : replace original with updated version
+RUN mv /usr/local/apache2/conf/httpd.conf /usr/local/apache2/conf/httpd.conf.orig
+COPY httpd.conf /usr/local/apache2/conf/httpd.conf
+# COPY httpd_start_angular.sh /usr/src/app/httpd_start_angular.sh
+RUN chmod u+x /usr/src/app/*.sh
+
+# copy angular app files, that were built in stage 1 above, to the web document directory
+COPY --from=appbuild /usr/src/app/dist/test-app /usr/local/apache2/htdocs
+
+# EXPOSE 80
+# Here 2222 is needed for Azure App Service to enable SSH
+EXPOSE 4200 2222
+# CMD ["/usr/src/app/httpd_start_angular.sh"]
