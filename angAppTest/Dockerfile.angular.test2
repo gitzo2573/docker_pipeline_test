@@ -1,8 +1,8 @@
 ### STAGE 1: Build Application ###
-FROM node:14.17-buster AS appbuild
+FROM node:12.17.0-alpine AS appbuild
 WORKDIR /usr/src/app
-COPY package.json ./
-RUN DEBIAN_FRONTEND=noninteractive apt-get update
+COPY package.json package-lock.json ./
+
 RUN npm install
 # copy all source code - unneeded files/foldes are listed in the .dockerignore file
 COPY . .
@@ -20,8 +20,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y apt-util
 # Install packages.
 # openssh-server is required in order to SSH into app service running in Azure dashboard. 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
-    sudo systemd firewalld lynx \
-    bash coreutils curl nano vim git tar openssh-client openssh-server msmtp \
+    sudo systemd firewalld lynx  \
+    bash coreutils curl nano vim git tar openssh-client openssh-server msmtp wget \
     cron gnupg2 composer locales locales-all snmp supervisor \
     lsb-release apt-transport-https bsdmainutils ntpdate; \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -44,7 +44,7 @@ RUN DEBIAN_FRONTEND=noninteractive wget --no-check-certificate https://packages.
 RUN mv /usr/local/apache2/conf/httpd.conf /usr/local/apache2/conf/httpd.conf.orig
 COPY httpd.conf /usr/local/apache2/conf/httpd.conf
 # COPY httpd_start_angular.sh /usr/src/app/httpd_start_angular.sh
-RUN chmod u+x /usr/src/app/*.sh
+# RUN chmod u+x /usr/src/app/*.sh
 
 # copy angular app files, that were built in stage 1 above, to the web document directory
 COPY --from=appbuild /usr/src/app/dist/test-app /usr/local/apache2/htdocs
